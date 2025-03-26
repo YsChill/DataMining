@@ -32,32 +32,42 @@ tn, fp, fn, tp
 #clf = svm.SVC(C=C, gamma=gamma, kernel='rbf', probability=True)
 C = [0.1, 1, 10, 100, 1e+03, 1e+04, 1e+05]
 gamma = [1e-03, 1e-04, 1e-05, 1e-06]
-degrees = [1, 2, 3, 4]
+degrees = [1, 2]
 results = []
 
 for c in C:
     for d in degrees:
         for g in gamma:
-            clf = svm.SVC(C=c, gamma=g, kernel='poly', degree=d, probability=True)
-            clf.fit(train.iloc[:, 0:8], train.iloc[:, 8])
-            y_pred = clf.predict(test.iloc[:, 0:8])
-            tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+            if d >= 2 and c >= 1000:
+               results.append({
+                    'Kernel': 'None',
+                    'C': "0",
+                    'Gamma': "0",
+                    'Degree': "0",
+                    'Train Accuracy': "0",
+                    'Test Accuracy': "0"
+                })
+            else:
+                clf = svm.SVC(C=c, gamma=g, kernel='poly', degree=d, probability=True)
+                clf.fit(train.iloc[:, 0:8], train.iloc[:, 8])
+                y_pred = clf.predict(test.iloc[:, 0:8])
+                tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
 
-            from sklearn.metrics import accuracy_score
+                from sklearn.metrics import accuracy_score
 
-            test_acc = (tp + tn) / (tp + tn + fp + fn)
-            y_pred_train = clf.predict(train.iloc[:, 0:8])
-            train_acc = accuracy_score(train.iloc[:, 8], y_pred_train)
+                test_acc = (tp + tn) / (tp + tn + fp + fn)
+                y_pred_train = clf.predict(train.iloc[:, 0:8])
+                train_acc = accuracy_score(train.iloc[:, 8], y_pred_train)
 
-            print(f"Kernel = Poly, C={c}, Degree={d}, Gamma={g} | Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}")
-            results.append({
-                'Kernel': 'Poly',
-                'C': c,
-                'Gamma': g,
-                'Degree': d,
-                'Train Accuracy': train_acc,
-                'Test Accuracy': test_acc
-            })
+                print(f"Kernel = Poly, C={c}, Degree={d}, Gamma={g} | Train Acc: {train_acc:.4f}, Test Acc: {test_acc:.4f}")
+                results.append({
+                    'Kernel': 'Poly',
+                    'C': c,
+                    'Gamma': g,
+                    'Degree': d,
+                    'Train Accuracy': train_acc,
+                    'Test Accuracy': test_acc
+                })
 
 for c in C:
   for g in gamma:
@@ -106,6 +116,8 @@ for c in C:
             'Train Accuracy': train_acc,
             'Test Accuracy': test_acc
         })
+
+C = [0.1, 1, 10, 100, 1e+03]
 
 for c in C:
   clf = svm.SVC(C=c, kernel='linear', probability=True)  # gamma is ignored
