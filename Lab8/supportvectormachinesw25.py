@@ -11,7 +11,7 @@ from sklearn import svm
 import pandas as pd
 import numpy as np
 
-C=1e+03 #1000
+C=1e+05 #100000
 gamma=1e-05 #0.0001
 clf = svm.SVC(C=C, gamma=gamma, kernel='rbf', probability=True)
 
@@ -28,7 +28,7 @@ from sklearn.metrics import confusion_matrix #let's see how good we did
 y_true = test.iloc[:,8]
 tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
 tn, fp, fn, tp
-
+"""
 #clf = svm.SVC(C=C, gamma=gamma, kernel='rbf', probability=True)
 C = [0.1, 1, 10, 100, 1e+03, 1e+04, 1e+05]
 gamma = [1e-03, 1e-04, 1e-05, 1e-06]
@@ -146,6 +146,8 @@ results_df = pd.DataFrame(results)
 results_df.to_csv('svm_results.csv', index=False)
 print("Results exported to svm_results.csv")
 
+
+"""
 import numpy as np
 from sklearn.metrics import roc_curve, auc
 from numpy import interp
