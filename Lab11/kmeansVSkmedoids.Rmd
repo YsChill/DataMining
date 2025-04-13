@@ -1,0 +1,81 @@
+
+---
+title: "K-Means vs K-Medoids Performance and Clustering Visualization"
+author: "Modified for Participation Task"
+output: html_document
+---
+
+## Performance Comparison: Varying Data Sizes
+
+```{r libraries, message=FALSE, warning=FALSE}
+library(cluster)      # For K-Medoids (PAM)
+library(factoextra)   # For visualization
+library(ggplot2)      # For plotting
+library(tictoc)       # For measuring execution time
+```
+
+```{r simulation-loop}
+set.seed(42)
+
+sizes <- seq(300, 10500, 200)
+kmeans_times <- c()
+kmedoids_times <- c()
+
+for (n in sizes) {
+  cat("Running for n =", n, "\\n")
+  
+  x <- c(rnorm(n/3, mean=0), rnorm(n/3, mean=3), rnorm(n/3, mean=6))
+  y <- c(rnorm(n/3, mean=0), rnorm(n/3, mean=3), rnorm(n/3, mean=6))
+  data <- data.frame(x, y)
+  
+  tic()
+  kmeans(data, centers=3, nstart=10)
+  kmeans_time <- toc(quiet = TRUE)
+  kmeans_times <- c(kmeans_times, kmeans_time$toc - kmeans_time$tic)
+  
+  tic()
+  pam(data, k=3)
+  kmedoids_time <- toc(quiet = TRUE)
+  kmedoids_times <- c(kmedoids_times, kmedoids_time$toc - kmedoids_time$tic)
+}
+
+```
+
+```{r plot-times}
+df_times <- data.frame(Size = sizes, KMeans = kmeans_times, KMedoids = kmedoids_times)
+
+ggplot(df_times, aes(x = Size)) +
+  geom_line(aes(y = KMeans, color = "KMeans")) +
+  geom_line(aes(y = KMedoids, color = "KMedoids")) +
+  labs(title = "Run Time vs Data Size", y = "Time (sec)", color = "Algorithm") +
+  theme_minimal()
+```
+
+## Clustering on the Iris Dataset
+
+```{r iris-cluster}
+data(iris)
+iris_data <- iris[, 1:2]  # Use only two features for visualization
+
+kmeans_iris <- kmeans(iris_data, centers = 3, nstart = 10)
+pam_iris <- pam(iris_data, k = 3)
+
+iris$KMeansCluster <- as.factor(kmeans_iris$cluster)
+iris$KMedoidsCluster <- as.factor(pam_iris$clustering)
+```
+
+### K-Means on Iris
+```{r iris-kmeans-plot}
+ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, color = KMeansCluster, shape = Species)) +
+  geom_point(size = 3) +
+  labs(title = "K-Means Clustering on Iris Data") +
+  theme_minimal()
+```
+
+### K-Medoids on Iris
+```{r iris-kmedoids-plot}
+ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, color = KMedoidsCluster, shape = Species)) +
+  geom_point(size = 3) +
+  labs(title = "K-Medoids Clustering on Iris Data") +
+  theme_minimal()
+```
