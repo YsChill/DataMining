@@ -1,81 +1,129 @@
 
 ---
-title: "K-Means vs K-Medoids Performance and Clustering Visualization"
-author: "Modified for Participation Task"
+title: "K-Means vs K-Medoids: Performance & Clustering Visualization"
+author: "Generated for Participation"
 output: html_document
 ---
 
-## Performance Comparison: Varying Data Sizes
+## Load Libraries
 
-```{r libraries, message=FALSE, warning=FALSE}
-library(cluster)      # For K-Medoids (PAM)
-library(factoextra)   # For visualization
-library(ggplot2)      # For plotting
-library(tictoc)       # For measuring execution time
+```{r setup, message=FALSE, warning=FALSE}
+library(cluster)      # PAM for k-medoids
+library(factoextra)   # Visualizing clusters
+library(ggplot2)      # Plotting
+library(tictoc)       # Timing
 ```
 
-```{r simulation-loop}
+## Clustering on Simulated Data of Varying Size
+
+```{r simulation}
 set.seed(42)
 
 sizes <- seq(300, 10500, 200)
 kmeans_times <- c()
 kmedoids_times <- c()
+kmeans_sil_scores <- c()
+kmedoids_sil_scores <- c()
 
 for (n in sizes) {
-  cat("Running for n =", n, "\\n")
-  
-  x <- c(rnorm(n/3, mean=0), rnorm(n/3, mean=3), rnorm(n/3, mean=6))
-  y <- c(rnorm(n/3, mean=0), rnorm(n/3, mean=3), rnorm(n/3, mean=6))
-  data <- data.frame(x, y)
-  
-  tic()
-  kmeans(data, centers=3, nstart=10)
-  kmeans_time <- toc(quiet = TRUE)
-  kmeans_times <- c(kmeans_times, kmeans_time$toc - kmeans_time$tic)
-  
-  tic()
-  pam(data, k=3)
-  kmedoids_time <- toc(quiet = TRUE)
-  kmedoids_times <- c(kmedoids_times, kmedoids_time$toc - kmedoids_time$tic)
-}
+  cat("Running for n =", n, "\n")
 
+  # Simulated 2D data with 3 clusters
+  x <- c(rnorm(n/3, mean=0, sd=1), rnorm(n/3, mean=5, sd=1), rnorm(n/3, mean=10, sd=1))
+  y <- c(rnorm(n/3, mean=0, sd=1), rnorm(n/3, mean=5, sd=1), rnorm(n/3, mean=10, sd=1))
+  data <- data.frame(x, y)
+
+  # Time KMeans
+  tic()
+  kmeans_result <- kmeans(data, centers=3, nstart=10)
+  time_kmeans <- toc(quiet = TRUE)
+  kmeans_times <- c(kmeans_times, time_kmeans$toc - time_kmeans$tic)
+
+  # KMeans silhouette
+  sil_kmeans <- silhouette(kmeans_result$cluster, dist(data))
+  kmeans_sil_scores <- c(kmeans_sil_scores, mean(sil_kmeans[, 3]))
+
+  # Time PAM
+  tic()
+  pam_result <- pam(data, k=3)
+  time_pam <- toc(quiet = TRUE)
+  kmedoids_times <- c(kmedoids_times, time_pam$toc - time_pam$tic)
+
+  # PAM silhouette
+  sil_pam <- silhouette(pam_result$clustering, dist(data))
+  kmedoids_sil_scores <- c(kmedoids_sil_scores, mean(sil_pam[, 3]))
+}
 ```
 
-```{r plot-times}
+## Plot and Save: Runtime Comparison
+
+```{r plot-runtime}
 df_times <- data.frame(Size = sizes, KMeans = kmeans_times, KMedoids = kmedoids_times)
 
-ggplot(df_times, aes(x = Size)) +
+time_plot <- ggplot(df_times, aes(x = Size)) +
   geom_line(aes(y = KMeans, color = "KMeans")) +
   geom_line(aes(y = KMedoids, color = "KMedoids")) +
   labs(title = "Run Time vs Data Size", y = "Time (sec)", color = "Algorithm") +
   theme_minimal()
+
+print(time_plot)
+ggsave("runtime_plot.png", plot = time_plot, width = 7, height = 5)
 ```
 
-## Clustering on the Iris Dataset
+## Plot and Save: Silhouette Score Comparison
 
-```{r iris-cluster}
+```{r plot-silhouette}
+df_sil <- data.frame(Size = sizes, KMeans = kmeans_sil_scores, KMedoids = kmedoids_sil_scores)
+
+sil_plot <- ggplot(df_sil, aes(x = Size)) +
+  geom_line(aes(y = KMeans, color = "KMeans")) +
+  geom_line(aes(y = KMedoids, color = "KMedoids")) +
+  labs(title = "Silhouette Score vs Data Size", y = "Silhouette Score", color = "Algorithm") +
+  theme_minimal()
+
+print(sil_plot)
+ggsave("silhouette_plot.png", plot = sil_plot, width = 7, height = 5)
+```
+
+## Save Results to CSV
+
+```{r save-csv}
+results_df <- data.frame(
+  Size = sizes,
+  KMeans_Time = kmeans_times,
+  KMedoids_Time = kmedoids_times,
+  KMeans_Silhouette = kmeans_sil_scores,
+  KMedoids_Silhouette = kmedoids_sil_scores
+)
+write.csv(results_df, "clustering_performance_results.csv", row.names = FALSE)
+```
+
+## Real Dataset: Iris Clustering
+
+```{r iris-clustering}
 data(iris)
-iris_data <- iris[, 1:2]  # Use only two features for visualization
+iris_data <- iris[, 1:2]
 
+# Clustering
 kmeans_iris <- kmeans(iris_data, centers = 3, nstart = 10)
 pam_iris <- pam(iris_data, k = 3)
 
 iris$KMeansCluster <- as.factor(kmeans_iris$cluster)
 iris$KMedoidsCluster <- as.factor(pam_iris$clustering)
-```
 
-### K-Means on Iris
-```{r iris-kmeans-plot}
-ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, color = KMeansCluster, shape = Species)) +
+# KMeans Plot
+p1 <- ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, color = KMeansCluster, shape = Species)) +
   geom_point(size = 3) +
-  labs(title = "K-Means Clustering on Iris Data") +
+  labs(title = "K-Means Clustering on Iris") +
   theme_minimal()
-```
+print(p1)
+ggsave("iris_kmeans_plot.png", plot = p1, width = 7, height = 5)
 
-### K-Medoids on Iris
-```{r iris-kmedoids-plot}
-ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, color = KMedoidsCluster, shape = Species)) +
+# PAM Plot
+p2 <- ggplot(iris, aes(x = Sepal.Length, y = Sepal.Width, color = KMedoidsCluster, shape = Species)) +
   geom_point(size = 3) +
-  labs(title = "K-Medoids Clustering on Iris Data") +
+  labs(title = "K-Medoids Clustering on Iris") +
   theme_minimal()
+print(p2)
+ggsave("iris_kmedoids_plot.png", plot = p2, width = 7, height = 5)
 ```
